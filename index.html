@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Winson Liu">
+<title>備山 · 介面設計稿預覽 — Winson Liu</title>
+<style>
+/* 色票取自設計稿元件庫第 01 組 PALETTE，取色腳本統計已驗證 */
+:root{
+  --bg:#e4ebec;          /* 頁面底：冷霧白深一階 */
+  --bg-soft:#fcfcfc;     /* 縮圖底：設計稿畫布白，與截圖無縫 */
+  --card:#ffffff;
+  --accent:#5c6a61;      /* 主色 石綠 */
+  --accent-hover:#4b574f;
+  --accent-2:#b8501f;    /* 標記橘 */
+  --ink:#12211a;         /* 墨綠・文字 */
+  --muted-text:#5c6a61;
+  --line:#d3dcdd;
+  --line-soft:#e8eeee;
+  --serif:"Songti TC","Noto Serif TC","Source Han Serif TC",Georgia,serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  --tabh:108px;   /* 導覽列實際高度由 JS 量測回寫 */
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* ── 頁首 ───────────────────────────── */
+header.wrap{padding-top:56px;padding-bottom:36px}
+.brand{
+  display:inline-flex;align-items:center;gap:8px;
+  font:600 13px/1 var(--mono);letter-spacing:.14em;color:var(--muted-text);
+  text-transform:uppercase;margin-bottom:22px;
+}
+.brand i{width:7px;height:7px;border-radius:50%;background:var(--accent-2);font-style:normal}
+h1{font:400 40px/1.25 var(--serif);margin:0 0 14px;letter-spacing:.01em}
+h1 small{display:block;font:400 15px/1.7 inherit;color:var(--muted-text);margin-top:10px;font-family:inherit}
+.byline{display:flex;align-items:center;gap:11px;margin:0 0 26px;font:500 14px/1 inherit;color:var(--ink)}
+.byline em{font:400 11px/1 var(--mono);font-style:normal;letter-spacing:.14em;color:var(--muted-text)}
+.intro{max-width:680px;color:var(--muted-text);margin:0}
+
+/* ── 導覽層級：大標分頁 ＋ 小標節導覽 ─── */
+.tabbar{position:sticky;top:0;z-index:40;background:rgba(228,235,236,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.tabs{position:relative;display:flex;gap:8px;overflow-x:auto;padding:12px 0 10px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  position:relative;z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:9px;
+  border:0;background:none;border-radius:999px;
+  padding:11px 20px;font:600 15px/1 inherit;color:var(--muted-text);cursor:pointer;
+  transition:color .25s ease;
+}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected=true]{color:#fff}
+.tab b{font:600 11px/1 var(--mono);opacity:.7}
+/* 滑動指示膠囊：位置與尺寸由 JS 對齊選中的分頁 */
+.ind{
+  position:absolute;left:0;top:0;width:0;height:0;border-radius:999px;background:var(--accent);z-index:0;
+  transition:transform .32s cubic-bezier(.3,.9,.3,1),width .32s cubic-bezier(.3,.9,.3,1);
+}
+
+.subnav{border-top:1px solid var(--line-soft)}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:9px 0 11px;scrollbar-width:none}
+.chips[hidden]{display:none}   /* display:flex 會蓋掉 UA 的 [hidden] 規則，要自己補回 */
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;
+  border:1px solid transparent;background:none;border-radius:999px;
+  padding:6px 13px;font:400 12.5px/1.4 inherit;color:var(--muted-text);
+  cursor:pointer;text-decoration:none;
+  transition:color .22s ease,background .22s ease,border-color .22s ease;
+}
+.chip i{flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.3;transform:scale(.8);transition:opacity .22s ease,transform .22s ease,background .22s ease}
+.chip b{font:600 10.5px/1 var(--mono);color:var(--accent-2)}
+.chip:hover{color:var(--ink)}
+.chip.on{background:var(--card);border-color:var(--accent);color:var(--accent)}
+.chip.on i{background:var(--accent-2);opacity:1;transform:scale(1.15)}
+/* 閱讀進度：貼著導覽列底邊的細線 */
+.pbar{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--accent-2);transition:width .12s linear}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .ind,.chip,.chip i,.tab,.top,.card,.pbar{transition:none}
+}
+
+/* ── 分節 ───────────────────────────── */
+section{scroll-margin-top:calc(var(--tabh) + 28px);padding:34px 0 6px}
+.sechead{border-top:1px solid var(--line);padding-top:20px;margin-bottom:22px;max-width:720px}
+.sectitle{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+.sectitle h2{font:400 25px/1.35 var(--serif);margin:0}
+.sectitle span{font:400 12px/1 var(--mono);color:var(--muted-text);letter-spacing:.08em}
+.lead{margin:0;font-size:14px;line-height:1.85;color:var(--muted-text)}
+
+/* ── 卡片網格 ───────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(226px,1fr));gap:20px}
+.card{
+  background:var(--card);border:1px solid var(--line-soft);border-radius:18px;
+  overflow:hidden;cursor:zoom-in;display:flex;flex-direction:column;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.card:hover{transform:translateY(-3px);border-color:var(--line);box-shadow:0 10px 26px rgba(18,33,26,.10)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.shot{
+  position:relative;background:var(--bg-soft);
+  aspect-ratio:1 / var(--r);border-bottom:1px solid var(--line-soft);
+}
+/* 絕對定位，否則圖片的內在高度會蓋掉 .shot 的 aspect-ratio。
+   四周留邊：上緣讓設計稿自己的代號標籤有呼吸空間、不被圓角切到，
+   下緣讓介面截斷處與說明文字之間留白，不互相擠壓。 */
+/* 尺寸要寫死：絕對定位的 img 是取代元素，width:auto 會用內在尺寸並忽略 right/bottom */
+.shot img{position:absolute;top:16px;left:12px;width:calc(100% - 24px);height:calc(100% - 28px);object-fit:cover;object-position:top center;display:block}
+.tags{position:absolute;top:24px;right:20px;display:flex;gap:5px}
+.tag{
+  font:500 10px/1 inherit;letter-spacing:.04em;padding:5px 8px;border-radius:6px;
+  background:rgba(18,33,26,.72);color:#fff;backdrop-filter:blur(6px);
+}
+.tag.spec{background:rgba(184,80,31,.88)}
+.meta{padding:13px 15px 15px}
+.no{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.no i{font:600 12px/1 var(--mono);color:var(--accent);font-style:normal}
+.no code{font:400 11px/1 var(--mono);color:var(--muted-text);background:var(--bg);padding:4px 7px;border-radius:5px}
+.meta h3{font:500 14px/1.5 inherit;margin:0 0 4px}
+.meta p{font-size:12px;line-height:1.65;color:var(--muted-text);margin:0}
+
+main.wrap{padding-bottom:90px}   /* 沒有頁尾了，留白讓最後一排卡片不貼著視窗底 */
+
+/* ── 流程總覽・敘事式 ─────────────────
+   文法：STAGE 標題 → 入口文字卡 → ◆ 判斷/匯流橫幅 → 並排狀態容器（邊框色＝路徑色）
+   → 共用 STEP 鏈 → ※ 尾註。 */
+.flegend{display:flex;flex-wrap:wrap;gap:16px;padding:20px 0 0;font-size:12.5px;color:var(--muted-text)}
+.flegend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.lg-ok{background:#2e6340}
+.lg-warn{background:var(--accent-2)}
+.lg-main{background:var(--accent)}
+.lg-dash{background:transparent;border:1.5px dashed var(--muted-text)}
+.stg{display:flex;align-items:baseline;gap:12px;margin:30px 0 12px}
+.stg b{font:600 11px/1 var(--mono);letter-spacing:.16em;color:var(--accent-2)}
+.stg h3{font:600 16px/1.4 inherit;margin:0}
+.entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:12px 0}
+.entry{background:var(--card);border:1px solid var(--line-soft);border-radius:14px;padding:15px 17px}
+.entry b{display:block;font:600 13.5px/1.5 inherit;margin-bottom:5px}
+.entry span{font-size:12.5px;line-height:1.75;color:var(--muted-text)}
+.fbar{
+  display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;row-gap:2px;
+  margin:18px 0;padding:13px 18px;border-radius:12px;
+  background:rgba(92,106,97,.10);border:1px solid var(--line);
+}
+.fbar em{font-style:normal;font-size:12px;color:var(--accent)}
+.fbar b{font:600 14px/1.6 inherit}
+.fbar span{font-size:12.5px;line-height:1.7;color:var(--muted-text)}
+.fbar.warn{background:rgba(184,80,31,.06);border-color:rgba(184,80,31,.3)}
+.fbar.warn em{color:var(--accent-2)}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:12px 0}
+.scol{border:1.5px solid var(--line);border-radius:16px;padding:14px 14px 12px;background:rgba(255,255,255,.5)}
+.scol.ok{border-color:#4c8a5f}
+.scol.warn{border-color:rgba(184,80,31,.55)}
+.scol.dashed{border-style:dashed}
+.sbadge{display:inline-block;font:600 11.5px/1 inherit;padding:6px 10px;border-radius:999px;background:var(--bg);margin-bottom:12px}
+.scol.ok .sbadge{color:#2e6340}
+.scol.warn .sbadge{color:var(--accent-2)}
+.srow{display:flex;flex-wrap:wrap;align-items:flex-start;gap:7px}
+.snote{margin:11px 2px 2px;font-size:12px;line-height:1.75;color:var(--muted-text)}
+.steps{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:14px 0}
+.stp{display:flex;flex-direction:column;gap:6px}
+.stplab{font:600 9.5px/1 var(--mono);letter-spacing:.14em;color:var(--muted-text);padding-left:3px}
+.snode{
+  width:152px;display:block;text-decoration:none;color:inherit;cursor:zoom-in;
+  background:var(--card);border:1px solid var(--line-soft);border-radius:14px;padding:7px;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.snode:hover{transform:translateY(-2px);border-color:var(--line);box-shadow:0 10px 24px rgba(18,33,26,.10)}
+.snode:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sthumb{display:block;position:relative;aspect-ratio:1/1.5;border-radius:9px;overflow:hidden;background:var(--bg-soft)}
+.sthumb img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.scap{display:flex;align-items:flex-start;gap:6px;padding:8px 3px 3px}
+.scap i{font:600 10px/1.5 var(--mono);color:var(--accent);font-style:normal}
+.scap span{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font:500 11.5px/1.45 inherit;color:var(--ink);
+}
+.arr{flex:0 0 auto;color:var(--muted-text);opacity:.55;font-style:normal;padding:0 2px}
+.steps .arr,.srow .arr{align-self:stretch;display:flex;align-items:center}
+.tpill{
+  flex:0 0 auto;max-width:190px;border:1.5px dashed var(--line);border-radius:999px;
+  padding:8px 13px;font:400 12.5px/1.5 inherit;color:var(--muted-text);
+}
+.srow > .tpill,.steps > .tpill{align-self:center}
+.fnote{margin:18px 0 6px;padding-top:13px;border-top:1px dashed var(--line-soft);font-size:12px;line-height:1.85;color:var(--muted-text)}
+@media (max-width:640px){
+  .snode{width:124px}
+  .stg{margin-top:22px}
+}
+
+/* ── 回到頂端 ───────────────────────── */
+/* z-index 低於燈箱的 100，燈箱開著時自然被蓋住 */
+.top{
+  position:fixed;right:24px;bottom:24px;z-index:50;
+  display:flex;align-items:center;gap:8px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:999px;padding:11px 17px 11px 14px;
+  font:500 13px/1 inherit;cursor:pointer;
+  box-shadow:0 6px 20px rgba(18,33,26,.13);
+  opacity:0;transform:translateY(10px);pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease,background .18s ease,color .18s ease,border-color .18s ease;
+}
+.top.on{opacity:1;transform:none;pointer-events:auto}
+.top:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.top:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.top svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── 燈箱 ───────────────────────────── */
+.box{
+  position:fixed;inset:0;z-index:100;display:none;
+  background:rgba(18,33,26,.93);backdrop-filter:blur(4px);
+}
+.box.on{display:flex;flex-direction:column}
+.boxtop{display:flex;justify-content:flex-end;padding:16px 20px}
+.boxview{flex:1;display:flex;align-items:center;justify-content:center;padding:0 68px;min-height:0}
+.boxview img{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;background:var(--bg-soft)}
+.boxbar{padding:16px 24px 26px;text-align:center;color:rgba(255,255,255,.9);font-size:13px}
+.boxbar code{font:400 12px/1 var(--mono);color:rgba(255,255,255,.55);margin-right:9px}
+.boxbar b{font:600 12px/1 var(--mono);color:rgba(255,255,255,.55);margin-right:9px}
+.nav,.x{
+  border:0;background:rgba(255,255,255,.13);color:#fff;cursor:pointer;
+  width:42px;height:42px;border-radius:50%;font-size:18px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+}
+.nav:hover,.x:hover{background:rgba(255,255,255,.26)}
+.nav{position:absolute;top:50%;transform:translateY(-50%)}
+.nav.prev{left:16px}.nav.next{right:16px}
+
+@media (max-width:640px){
+  header{padding:38px 0 26px}
+  h1{font-size:30px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:13px}
+  .boxview{padding:0 14px}
+  .nav{width:36px;height:36px}
+  .nav.prev{left:6px}.nav.next{right:6px}
+  .top{right:14px;bottom:14px;padding:12px;gap:0}   /* 窄螢幕只留箭頭 */
+  .top span{display:none}
+  .tab{font-size:14px;padding:10px 16px}
+}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="brand"><i></i>備山 BEISHAN · UI REVIEW</div>
+  <h1>介面設計稿預覽
+    <small>登山共乘與找隊友平台 · 43 張畫面 · 2026/08</small>
+  </h1>
+  <p class="byline"><em>設計・製作</em>Winson Liu</p>
+  <p class="intro">
+    這是開發前的完整介面稿。「流程總覽」把 43 張畫面串成六條使用動線，先看懂動線再進圖牆；其餘三個分頁照角色瀏覽全部畫面。點任一張圖或流程節點可放大，放大後用鍵盤 ← → 連續翻看、Esc 關閉。
+    每張卡片同時標了流水號與設計稿原本的規格代號（如 <code style="font-family:var(--mono);font-size:12px">P-01</code>），
+    討論時直接報代號即可對上。
+  </p>
+</header>
+
+<div class="tabbar">
+  <div class="wrap">
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="subnav" id="subnav"></div>
+  </div>
+  <div class="pbar" id="pbar"></div>
+</div>
+<main class="wrap" id="main"></main>
+
+<button class="top" id="top" type="button" aria-label="回到頂端">
+  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.2V3.4M3.7 7.7 8 3.4l4.3 4.3"/></svg>
+  <span>回到頂端</span>
+</button>
+
+<div class="box" id="box" role="dialog" aria-modal="true" aria-label="設計稿放大檢視">
+  <div class="boxtop"><button class="x" id="x" aria-label="關閉">✕</button></div>
+  <div class="boxview">
+    <button class="nav prev" id="prev" aria-label="上一張">‹</button>
+    <img id="boximg" alt="">
+    <button class="nav next" id="next" aria-label="下一張">›</button>
+  </div>
+  <div class="boxbar" id="boxbar"></div>
+</div>
+
+<script>
+/* 資料：改動設計稿時只要編這個陣列。
+   ratio = 縮圖框高寬比：節內最短圖的比例（clamp 1.5–2.2）再 +0.10，
+   補回上下留邊吃掉的高度，讓實際看得到的介面份量與留邊前一致。 */
+const TABS = [
+{ id:'hiker', label:'山友動線', sections:[
+  { id:'account', title:'帳號與能力檔案', dir:'account', ratio:2.01,
+    lead:'從註冊到建立可信度的完整動線。使用者先用兩分鐘問卷產生「灰標」自填資料，馬上就能申請入隊；之後上傳 GPX 比對路線資料庫升成「藍標」佐證。隱私設定決定領隊在審核時看到多少。',
+    items:[
+      {f:'a01',c:'A-00',t:'登入・新用戶入口',d:'LINE 登入與「先逛逛不登入」兩條路，三句價值主張'},
+      {f:'a02',c:'M-01-1',t:'能力精靈 Step 1・爬升與頻率',d:'選最接近的就好，之後上傳 GPX 可自動校正'},
+      {f:'a03',c:'M-01-1a',t:'能力精靈 Step 2-3・地形與習慣',d:'技術地形複選，加上背重與慣走位置'},
+      {f:'a04',c:'M-00-1',t:'編輯自填資料',d:'從「我的」回頭改，儲存後燈號立即重算'},
+      {f:'a05',c:'M-00',t:'我的・能力檔案總覽',d:'六項能力與燈號、三種身分卡、司機接單開關'},
+      {f:'a06',c:'M-04',t:'GPX 上傳與解析',d:'拖放檔案比對路線，確認無誤才認列升藍標'},
+      {f:'a07',c:'P-07',t:'GPX 匯出教學',d:'Strava／健行筆記／Apple Watch 三種匯出步驟'},
+      {f:'a08',c:'P-10',t:'我爬過的路線・路線資料庫',d:'依山脈分組勾選，計入能力佐證'},
+      {f:'a09',c:'M-01-1c',t:'隱私與揭露設定',d:'匿名申請或直接揭露，附公開名片預覽'},
+      {f:'a10',c:'M-06 / M-07',t:'通知設定與我的訂位',d:'通知走 LINE 推播、訂位紀錄、收到的評價'},
+    ]},
+  { id:'team', title:'找隊伍・隊員動線', dir:'team', ratio:1.78,
+    lead:'團員視角的完整動線：從列表找到符合能力的團 → 帶著落差說明申請 → 行前公裝分工 → 回程回填時間升級燈號。關鍵設計是「落差不擋申請」，系統自動附上落差說明，由領隊判斷。',
+    items:[
+      {f:'t01',c:'P-01',t:'首頁',d:'找隊伍／開團雙入口、近期招募、今日路線開放'},
+      {f:'t02',c:'P-02',t:'隊伍列表・篩選',d:'招募中／已中籤／抽籤中／已額滿四種狀態'},
+      {f:'t03',c:'P-03',t:'隊伍詳情・訪客視角',d:'入隊條件逐項比對「你符合嗎」、成員、行程'},
+      {f:'t04',c:'P-03-1',t:'申請入隊・帶落差提示',d:'落差不擋申請，送出時自動附說明給領隊判斷'},
+      {f:'t05',c:'P-03',t:'三種身分的底部動作列',d:'訪客／隊員／領隊同一頁，只換底部動作',b:'規格'},
+      {f:'t06',c:'M-03',t:'我的隊伍・行前資訊與分工',d:'集合時間、接駁確認狀態、公裝分工認領'},
+      {f:'t07',c:'P-11-2',t:'隊內群聊',d:'成團後自動建立，可把共乘卡直接丟進對話'},
+      {f:'t08',c:'M-05',t:'行程後回填・資料飛輪',d:'回填完成時間即升綠標，並更新社群百分位'},
+      {f:'t09',c:'F-01',t:'共用篩選條件庫',d:'一組條件庫、四種情境共用的設計說明',b:'規格'},
+    ]},
+  { id:'ride', title:'找車・乘客端', dir:'ride', ratio:2.26,
+    lead:'交通媒合的兩條軌道並行：山友互助（虛線卡、平台不經手金流、0 抽成）與職業接駁（實心卡、驗證營業登記與乘客責任險、抽 8–10%）。共乘價格隨人數動態變動，湊愈多人愈便宜。',
+    items:[
+      {f:'r01',c:'P-06a',t:'找車・山友互助',d:'包車均攤／人找車／車找人三種貼文型態'},
+      {f:'r02',c:'P-06b',t:'找車・職業接駁',d:'已驗證業者，分接駁團隊與個人接案'},
+      {f:'r03',c:'P-06-1',t:'共乘貼文詳情・均攤價格表',d:'5～8 人各自單價一次列出，看得到湊人的好處'},
+      {f:'r04',c:'P-06-2',t:'需求單詳情・司機接單視角',d:'乘客開的需求單，司機端看到的樣子'},
+      {f:'r05',c:'P-05',t:'認證接駁司機列表',d:'依路線、日期、評價、價格四種排序'},
+      {f:'r06',c:'P-05-1',t:'司機詳情・開放時段與評價',d:'準時率、取消率、近 30 天班表與山友評價'},
+    ]},
+  { id:'route', title:'路線資訊', dir:'route', ratio:2.12,
+    lead:'官方路線開放狀態每日同步。詳情頁把使用者能力與路線需求逐項對齊成 ability vector，並附上社群實際完成時間的分位數——刻意不給單一分數，判讀是提示不是保證。',
+    items:[
+      {f:'p01',c:'P-04',t:'路線圖鑑・列表',d:'今日開放／需抽籤／因災害封閉三種狀態'},
+      {f:'p02',c:'P-04-1',t:'路線詳情・行前落差看板',d:'你 vs 這條路線的四項落差、社群完成時間分位',b:'長圖'},
+    ]},
+]},
+
+{ id:'supply', label:'領隊與司機', sections:[
+  { id:'leader', title:'開團領隊工具', dir:'leader', ratio:1.87,
+    lead:'領隊視角：建隊精靈 → 設入隊門檻（即時預覽有多少比例的活躍山友符合）→ 審核申請 → 成員與中籤管理。官方抽籤系統沒有開放介接，中籤結果由領隊手動登錄並附截圖驗證。',
+    items:[
+      {f:'l01',c:'M-02-1',t:'建立隊伍精靈 Step 1-4',d:'隊名、路線日期、邀請隊友、三個開關、公裝分工',b:'長圖'},
+      {f:'l02',c:'P-09',t:'入隊門檻設定',d:'設條件即時預覽「38% 活躍山友符合」'},
+      {f:'l03',c:'P-08',t:'入隊申請審核',d:'逐項達標比對、對談問句建議、匿名申請處理',b:'長圖'},
+      {f:'l04',c:'M-02-3',t:'成員管理',d:'訂金狀態、公裝認領、轉讓領隊、移出隊伍'},
+      {f:'l05',c:'M-02-2',t:'中籤結果登錄',d:'領隊手動登錄，上傳截圖後隊伍掛「已驗證」章'},
+      {f:'l06',c:'P-11',t:'訊息・聊天與隊對隊邀請',d:'併隊邀請、領隊對談、隊內訊息三種串'},
+      {f:'l07',c:'P-11-1',t:'隊對隊聊天室・併隊協商',d:'雙方領隊都同意才併隊，談不成各自回原狀'},
+    ]},
+  { id:'driver', title:'司機端', dir:'driver', ratio:2.3,
+    lead:'供給端工具。司機分兩種身分：接駁團隊（營業登記＋職業駕照＋乘客責任險，可開發票）與個人接案（身分驗證＋強制險，靠接駁次數累積信任）。需求單依「服務路線 × 空檔日期」自動推到司機面前。',
+    items:[
+      {f:'d01',c:'D-01',t:'司機註冊與認證',d:'兩種身分擇一、證件上傳與審核退件處理'},
+      {f:'d02',c:'D-03',t:'司機班表・服務路線與空檔',d:'可跑的線開關、月曆空檔、自動媒合需求單'},
+      {f:'d03',c:'D-02 / D-04',t:'接單・需求單牆與訂單管理',d:'符合你的線、洽談中、本月扣完服務費的實拿'},
+    ]},
+]},
+
+{ id:'system', label:'系統與後台', sections:[
+  { id:'state', title:'系統狀態', dir:'state', ratio:2.3,
+    lead:'空狀態、壞消息、載入骨架的統一規格。原則是每一種都給當下能做的動作，不只說「沒有資料」；壞消息說清原因後立刻給下一條路；骨架照實際版型長，載入完不跳版。',
+    items:[
+      {f:'s01',c:'S-01',t:'空狀態六種',d:'列表、篩選無果、未加入、無訊息、共乘牆、載入中',b:'規格'},
+      {f:'s02',c:'S-02',t:'壞消息三種',d:'申請被拒、隊伍取消、抽籤落選，各給下一步',b:'規格'},
+      {f:'s03',c:'S-03',t:'載入骨架三種',d:'列表、詳情、GPX 解析進度（講到哪一步不只給％）',b:'規格'},
+      {f:'s04',c:'S-04',t:'兩種「還不能看」',d:'未登入路線頁與司機端無單，只擋需要身分的那塊',b:'規格'},
+    ]},
+  { id:'ops', title:'後台與元件庫', dir:'ops', ratio:2.3,
+    lead:'營運端與設計系統。後台刻意不套玻璃質感，以操作效率為主，與前台明確區分。元件庫定義 17 組規格——其中「虛線＋半透明＝互助、實心不透明＝職業」把法規分流直接做進容器材質。',
+    items:[
+      {f:'o01',c:'A-01～A-06',t:'營運控制台',d:'司機審核、檢舉處理、GPX 異常判定、服務費設定'},
+      {f:'o02',c:'—',t:'元件庫 Component Board',d:'色票、玻璃層級、圓角、徽章、按鈕、燈號等 17 組',b:'規格'},
+    ]},
+]},
+];
+
+/* ── 建構 DOM ─────────────────────── */
+const flat = [];   // 全域連號 + 燈箱順序
+TABS.forEach(tab => tab.sections.forEach(sec => sec.items.forEach(it => {
+  it.src = `assets/${sec.dir}/${it.f}.png`;
+  it.n = String(flat.length + 1).padStart(2, '0');
+  flat.push(it);
+})));
+
+/* 流程總覽（敘事式）：blocks 由上而下講一條流程。
+   k:'stage' 階段標題｜'entries' 入口文字卡｜'bar' ◆ 判斷/匯流橫幅（tone:'warn'＝條件段）
+   k:'split' 並排狀態容器（cols，tone: ok/warn/dashed＝路徑色）｜'steps' 步驟鏈（labels:true 掛 STEP 標籤）
+   k:'note' ※ 尾註。chain 裡數字＝全域流水號（引用 flat），{t:'…'}＝沒有畫面的抽象步驟。 */
+const FLOWS = [
+ { id:'f1', title:'新手上路',
+   lead:'訪客變成「可申請入隊」的會員。兩種進入方式最後都匯到能力精靈——差別只在訪客會先撞到被鎖住的「你 vs 這條路線」。',
+   blocks:[
+     {k:'stage', n:'STAGE 1', t:'從哪裡進來'},
+     {k:'entries', items:[
+       {t:'入口 A｜用 LINE 登入', d:'不設帳密，登入即同意條款；登入後直接進能力精靈。'},
+       {t:'入口 B｜先逛逛不登入', d:'不留任何資料。路線、隊伍、共乘都看得到，只鎖「屬於你的那段判讀」。'},
+     ]},
+     {k:'split', cols:[
+       {tone:'ok', tag:'入口 A・登入', chain:[1], d:'三句價值主張＋兩顆按鈕，沒有第三件事。'},
+       {tone:'dashed', tag:'入口 B・訪客逛逛', chain:[26,27,41], d:'逛到路線詳情時「你 vs 這條路線」是模糊鎖定的——想看落差，就是回頭登入的理由。'},
+     ]},
+     {k:'bar', t:'建立能力檔案', d:'兩條路都匯到這裡。大約兩分鐘，選最接近的就好，之後上傳 GPX 會自動校正。'},
+     {k:'stage', n:'STAGE 2', t:'能力精靈・三步建檔'},
+     {k:'steps', labels:true, chain:[2,3,5]},
+     {k:'note', d:'※ 完成後拿到灰標自填檔案，馬上可以申請入隊（見「團員找隊伍」）；想讓領隊更信任，先上傳 GPX 升藍標（見「能力資料飛輪」）。'},
+   ]},
+ { id:'f2', title:'能力資料飛輪',
+   lead:'全站核心機制。三條升級路徑對應站內三色信任標記：灰＝自填、藍＝GPX 佐證、綠＝平台實績——每一趟回填都讓下一個人的判讀更準。',
+   blocks:[
+     {k:'stage', n:'STAGE 1', t:'三條升級路徑'},
+     {k:'split', cols:[
+       {tone:'ok', tag:'綠標・平台實績', chain:[{t:'跟團完賽'},18], d:'回填實際完成時間與負重，配速百分位立即重算。'},
+       {tone:'', tag:'藍標・GPX 佐證', chain:[7,6,40], d:'照教學匯出 → 拖放上傳 → 比對路線資料庫；解析中可離開，完成後推播通知。'},
+       {tone:'dashed', tag:'灰標補充・勾選路線', chain:[8], d:'資料庫路線計入佐證；自訂路線不計入，但留在紀錄裡。'},
+     ]},
+     {k:'bar', t:'燈號重算・匯流到能力檔案', d:'三條路的結果都寫回同一份檔案，判讀與篩選立即更新。'},
+     {k:'steps', chain:[5]},
+     {k:'stage', n:'STAGE 2', t:'維護與後台'},
+     {k:'split', cols:[
+       {tone:'', tag:'自填維護', chain:[4], d:'只改要改的，儲存後燈號立即重算；抓不準就選保守的那格。'},
+       {tone:'warn', tag:'後台異常判定', chain:[42], d:'速度異常、時間重疊的 GPX 由營運人工判定，守住佐證的可信度。'},
+     ]},
+     {k:'note', d:'※ 原始數字永不公開——全站只顯示等級標籤與燈號，領隊看不到你的公里數與時間。'},
+   ]},
+ { id:'f3', title:'團員找隊伍',
+   lead:'最長的用戶旅程：找團 → 申請 → 審核 → 行前 → 出發 → 回填。關鍵設計是「落差不擋申請」——系統自動附說明，由領隊判斷。',
+   blocks:[
+     {k:'stage', n:'STAGE 1', t:'找到符合能力的團'},
+     {k:'steps', labels:true, chain:[11,12,19,13]},
+     {k:'bar', t:'條件比對・「你符合嗎」', d:'詳情頁把入隊條件跟你的能力逐項對齊；全部達標或部分符合都能送出申請。'},
+     {k:'split', cols:[
+       {tone:'ok', tag:'全部達標', chain:[{t:'直接申請'}], d:'一鍵送出，自動附上能力燈號與信任標記。'},
+       {tone:'warn', tag:'部分符合・帶落差', chain:[14], d:'自動附落差說明與補救建議——現在補一趟 GPX 還來得及（接「能力資料飛輪」）。'},
+       {tone:'dashed', tag:'匿名申請', chain:[9], d:'審核時只給代號、燈號與信任紀錄，核准後才揭露身分。'},
+     ]},
+     {k:'bar', t:'送出申請・領隊審核', d:'領隊通常 24 小時內回覆；接受後先開對談，談不合任一方都可取消，回到待審、不留紀錄。'},
+     {k:'steps', chain:[33]},
+     {k:'split', cols:[
+       {tone:'ok', tag:'入隊成功', chain:[{t:'進入隊伍・看行前資訊'}], d:'成團後隊內群聊自動建立。'},
+       {tone:'warn', tag:'被婉拒', chain:[39], d:'說清原因、立刻給下一條路；被拒不影響你的評價與信任紀錄。'},
+     ]},
+     {k:'bar', tone:'warn', t:'山屋抽籤・僅抽籤路線', d:'官方系統沒有介接，由領隊手動登錄結果——中籤續走；落選給三條路：候補、改抽下個梯次、加入已中籤缺人的隊。'},
+     {k:'steps', chain:[32]},
+     {k:'stage', n:'STAGE 2', t:'行前到回填（所有隊伍共用）'},
+     {k:'steps', labels:true, chain:[16,17,{t:'出發上山'},18]},
+     {k:'note', d:'※ 回填完成時間後燈號升級、社群百分位更新——接回「能力資料飛輪」。列表、篩選、訊息的空狀態樣式見 38「空狀態六種」。'},
+   ]},
+ { id:'f4', title:'領隊開團',
+   lead:'建團精靈五步成團。門檻設定會即時預覽「多少比例的活躍山友符合」——設太嚴，系統直接告訴你這團可能很難成行。',
+   blocks:[
+     {k:'stage', n:'STAGE 1', t:'建團與門檻'},
+     {k:'steps', labels:true, chain:[28,29,{t:'發布・開始收申請'}]},
+     {k:'stage', n:'STAGE 2', t:'審核與成員管理'},
+     {k:'steps', labels:true, chain:[30,31]},
+     {k:'split', cols:[
+       {tone:'dashed', tag:'同一頁・三種身分', chain:[15], d:'訪客／隊員／領隊看同一個隊伍頁，只有底部動作列跟著身分換。'},
+       {tone:'dashed', tag:'隊對隊併隊', chain:[33,34], d:'雙方領隊都同意才併隊；談不成各自回原狀，成員不受影響。'},
+     ]},
+     {k:'bar', tone:'warn', t:'中籤登錄・僅抽籤路線', d:'領隊手動登錄抽籤結果、上傳截圖掛「已驗證」章；謊報會被成員檢舉，查證屬實停權並公開記錄。'},
+     {k:'steps', chain:[32]},
+     {k:'stage', n:'STAGE 3', t:'行前與成行'},
+     {k:'steps', chain:[16,{t:'出發'}]},
+     {k:'split', cols:[
+       {tone:'warn', tag:'隊伍取消', chain:[39], d:'因天災取消不計入領隊取消紀錄；接駁訂位自動通知取消，山屋床位提醒讓給候補。'},
+     ]},
+     {k:'note', d:'※ 審核待辦、徵人開關都在隊伍頁的領隊動作列上直接操作，不用進編輯頁。'},
+   ]},
+ { id:'f5', title:'乘客找車',
+   lead:'交通媒合兩軌並行，容器材質就是法規分流：虛線卡＝山友互助、實心卡＝職業接駁——這個區分貫穿整站。',
+   blocks:[
+     {k:'stage', n:'STAGE 1', t:'從哪裡進來'},
+     {k:'entries', items:[
+       {t:'入口 A｜找車分頁', d:'首頁「我要找車」或底部導覽直接進，逛全部共乘與接駁。'},
+       {t:'入口 B｜隊伍卡帶路', d:'隊伍詳情與我的隊伍上的「這團還在找車」，帶著隊伍脈絡進來。'},
+     ]},
+     {k:'bar', t:'選軌・法規分流', d:'互助：平台不經手金流、不抽成、費用同車自行均攤。職業：驗證營業登記與乘客責任險，訂單由平台記錄、收 8% 服務費。'},
+     {k:'split', cols:[
+       {tone:'dashed', tag:'互助軌・虛線卡', chain:[20,22,17], d:'包車均攤動態計價，人越多越便宜；成行後把共乘卡直接丟回隊內群聊。'},
+       {tone:'ok', tag:'職業軌・實心卡', chain:[21,24,25], d:'認證司機的準時率、取消率、開放時段全公開；先對談確認人數時間，司機回覆才成立預訂。'},
+     ]},
+     {k:'split', cols:[
+       {tone:'warn', tag:'這條線沒人揪？', chain:[38], d:'空狀態不說「沒有資料」——直接給兩條路：發需求單，或看認證司機。'},
+     ]},
+     {k:'bar', t:'發需求單・讓司機來接', d:'寫路線、日期、人數與預算，符合「路線＋日期」的司機會主動聯繫。'},
+     {k:'steps', chain:[23]},
+     {k:'bar', t:'成行・訂位成立', d:'訂位與評價都收在「我的」。'},
+     {k:'steps', chain:[10]},
+     {k:'note', d:'※ 行程結束後互評。互助區費用一律同車自行處理；需要發票或保險理賠，請走職業接駁。'},
+   ]},
+ { id:'f6', title:'司機接單',
+   lead:'兩種入駐身分：接駁團隊（營業登記＋職業駕照＋乘客責任險，可開發票）與個人接案（身分＋駕照＋強制險，靠實績累積信任）。',
+   blocks:[
+     {k:'stage', n:'STAGE 1', t:'入駐與審核'},
+     {k:'steps', labels:true, chain:[35,42]},
+     {k:'bar', t:'審核通過・掛認證章', d:'通常 3 個工作天內回覆；退件會標明原因（例：保單影本模糊），補件重新送審即可。'},
+     {k:'stage', n:'STAGE 2', t:'開線與自動媒合'},
+     {k:'steps', chain:[36]},
+     {k:'bar', t:'需求單自動媒合', d:'只推「服務路線＋空檔日期」都對上的單——班表開得越準，收到的單越準。'},
+     {k:'split', cols:[
+       {tone:'ok', tag:'有單・接單對談', chain:[23,37], d:'看需求單詳情、開始對談；成訂後進訂單管理，月結看扣完服務費的實拿。'},
+       {tone:'warn', tag:'今天沒單', chain:[41], d:'空狀態帶市場情報：哪條線這週幾張單沒人接、假日需求是平日幾倍。'},
+     ]},
+     {k:'stage', n:'STAGE 3', t:'出車與累積'},
+     {k:'steps', chain:[{t:'出車'},25]},
+     {k:'note', d:'※ 山友的評價會累積在司機詳情頁——準時率與取消率，就是下一張訂單的來源。與「乘客找車」是同一件事的兩面。'},
+   ]},
+];
+
+/* 一條流程引用到的畫面（去重的全域流水號） */
+const flowNums = f => [...new Set(f.blocks.flatMap(b =>
+  (b.chain || []).concat((b.cols || []).flatMap(c => c.chain))
+    .filter(n => typeof n === 'number')))];
+
+const NAV = [
+  { id:'flow', label:'流程總覽', flows:FLOWS,
+    sections: FLOWS.map(f => ({ id:f.id, title:f.title, count: flowNums(f).length })) },
+  ...TABS,
+];
+
+function snode(num) {
+  const it = flat[num - 1];
+  const a = document.createElement('a');
+  a.className = 'snode';
+  a.tabIndex = 0;
+  a.innerHTML =
+    `<span class="sthumb"><img src="${it.src}" alt="${it.t}" loading="lazy"></span>
+     <span class="scap"><i>${it.n}</i><span>${it.t}</span></span>`;
+  const open = () => openBox(num - 1);
+  a.onclick = open;
+  a.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } };
+  return a;
+}
+
+/* 把 chain 鋪進容器：數字→畫面節點、{t}→抽象步驟膠囊，之間補箭頭；labels 掛 STEP n */
+function chainInto(row, chain, labels) {
+  chain.forEach((node, ni) => {
+    if (ni) { const i = document.createElement('i'); i.className = 'arr'; i.textContent = '→'; row.appendChild(i); }
+    const cell = typeof node === 'number'
+      ? snode(node)
+      : Object.assign(document.createElement('span'), { className: 'tpill', textContent: node.t });
+    if (labels) {
+      const wrap = document.createElement('div');
+      wrap.className = 'stp';
+      const lab = document.createElement('span');
+      lab.className = 'stplab';
+      lab.textContent = 'STEP ' + (ni + 1);
+      wrap.append(lab, cell);
+      row.appendChild(wrap);
+    } else row.appendChild(cell);
+  });
+}
+
+function buildFlows(flows, panel) {
+  const lg = document.createElement('div');
+  lg.className = 'flegend';
+  lg.innerHTML =
+    `<span><i class="lg-ok"></i>順利路徑</span>
+     <span><i class="lg-warn"></i>需處理・壞路徑・條件段</span>
+     <span><i class="lg-main"></i>判斷與匯流</span>
+     <span><i class="lg-dash"></i>互助・訪客・抽象步驟</span>`;
+  panel.appendChild(lg);
+
+  flows.forEach(f => {
+    const s = document.createElement('section');
+    s.id = f.id;
+    s.innerHTML =
+      `<div class="sechead">
+         <div class="sectitle"><h2>${f.title}</h2><span>${flowNums(f).length} 站</span></div>
+         <p class="lead">${f.lead}</p>
+       </div>`;
+    f.blocks.forEach(b => {
+      let el;
+      if (b.k === 'stage') {
+        el = document.createElement('div');
+        el.className = 'stg';
+        el.innerHTML = `<b>${b.n}</b><h3>${b.t}</h3>`;
+      } else if (b.k === 'entries') {
+        el = document.createElement('div');
+        el.className = 'entries';
+        el.innerHTML = b.items.map(x => `<div class="entry"><b>${x.t}</b><span>${x.d}</span></div>`).join('');
+      } else if (b.k === 'bar') {
+        el = document.createElement('div');
+        el.className = 'fbar' + (b.tone === 'warn' ? ' warn' : '');
+        el.innerHTML = `<em>◆</em><b>${b.t}</b>${b.d ? `<span>${b.d}</span>` : ''}`;
+      } else if (b.k === 'steps') {
+        el = document.createElement('div');
+        el.className = 'steps';
+        chainInto(el, b.chain, b.labels);
+      } else if (b.k === 'split') {
+        el = document.createElement('div');
+        el.className = 'split';
+        b.cols.forEach(col => {
+          const c = document.createElement('div');
+          c.className = 'scol' + (col.tone ? ' ' + col.tone : '');
+          const badge = document.createElement('span');
+          badge.className = 'sbadge';
+          badge.textContent = col.tag;
+          const row = document.createElement('div');
+          row.className = 'srow';
+          chainInto(row, col.chain);
+          c.append(badge, row);
+          if (col.d) {
+            const p = document.createElement('p');
+            p.className = 'snote';
+            p.textContent = col.d;
+            c.appendChild(p);
+          }
+          el.appendChild(c);
+        });
+      } else {   // note
+        el = document.createElement('p');
+        el.className = 'fnote';
+        el.textContent = b.d;
+      }
+      s.appendChild(el);
+    });
+    panel.appendChild(s);
+  });
+}
+
+const tabsEl = document.getElementById('tabs');
+const subnavEl = document.getElementById('subnav');
+const mainEl = document.getElementById('main');
+
+NAV.forEach((nav, ti) => {
+  const count = nav.flows
+    ? new Set(nav.flows.flatMap(flowNums)).size
+    : nav.sections.reduce((s, x) => s + x.items.length, 0);
+
+  const btn = document.createElement('button');
+  btn.className = 'tab';
+  btn.type = 'button';
+  btn.setAttribute('role', 'tab');
+  btn.setAttribute('aria-selected', ti === 0);
+  btn.innerHTML = `${nav.label}<b>${count}</b>`;
+  btn.onclick = () => selectTab(ti);
+  tabsEl.appendChild(btn);
+
+  const panel = document.createElement('div');
+  panel.id = `panel-${nav.id}`;
+  panel.hidden = ti !== 0;
+
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+  chips.hidden = ti !== 0;
+  nav.sections.forEach(sec => {
+    const a = document.createElement('a');
+    a.className = 'chip';
+    a.href = `#${sec.id}`;
+    a.innerHTML = `<i></i>${sec.title}<b>${sec.items ? sec.items.length : sec.count}</b>`;
+    a.onclick = () => setChip(chips, sec.id);   // 點擊先亮，捲動事件接手校正
+    chips.appendChild(a);
+  });
+  subnavEl.appendChild(chips);
+
+  if (nav.flows) { buildFlows(nav.flows, panel); mainEl.appendChild(panel); return; }
+
+  nav.sections.forEach(sec => {
+    const s = document.createElement('section');
+    s.id = sec.id;
+    s.innerHTML =
+      `<div class="sechead">
+         <div class="sectitle"><h2>${sec.title}</h2><span>${sec.items.length} 張</span></div>
+         <p class="lead">${sec.lead}</p>
+       </div>
+       <div class="grid" style="--r:${sec.ratio}"></div>`;
+    const grid = s.querySelector('.grid');
+
+    sec.items.forEach(it => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.tabIndex = 0;
+      card.innerHTML =
+        `<div class="shot">
+           <img src="${it.src}" alt="${it.t}" loading="lazy" width="452">
+           ${it.b ? `<div class="tags"><span class="tag ${it.b === '規格' ? 'spec' : ''}">${it.b}</span></div>` : ''}
+         </div>
+         <div class="meta">
+           <div class="no"><i>${it.n}</i><code>${it.c}</code></div>
+           <h3>${it.t}</h3>
+           <p>${it.d}</p>
+         </div>`;
+      const open = () => openBox(flat.indexOf(it));
+      card.onclick = open;
+      card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } };
+      grid.appendChild(card);
+    });
+    panel.appendChild(s);
+  });
+  mainEl.appendChild(panel);
+});
+
+/* ── 「你在哪裡」：滑動膠囊＋節 scroll-spy＋進度線 ── */
+const barEl = document.querySelector('.tabbar');
+const pbarEl = document.getElementById('pbar');
+const ind = document.createElement('div');
+ind.className = 'ind';
+tabsEl.appendChild(ind);
+let activeTab = 0;
+
+function moveInd(animate = true) {
+  const btn = tabsEl.querySelectorAll('.tab')[activeTab];
+  if (!animate) ind.style.transition = 'none';
+  ind.style.top = btn.offsetTop + 'px';
+  ind.style.height = btn.offsetHeight + 'px';
+  ind.style.width = btn.offsetWidth + 'px';
+  ind.style.transform = `translateX(${btn.offsetLeft}px)`;
+  if (!animate) { void ind.offsetWidth; ind.style.transition = ''; }
+}
+
+/* 導覽列實際高度回寫 --tabh，讓 scroll-margin-top 跟著對齊 */
+function syncBarH() {
+  document.documentElement.style.setProperty('--tabh', barEl.offsetHeight + 'px');
+}
+
+function setChip(row, id) {
+  [...row.children].forEach(c => c.classList.toggle('on', c.getAttribute('href') === '#' + id));
+}
+
+/* 探針放在導覽列下緣 +40px：掃過哪一節，哪一節的 chip 就亮 */
+function spy() {
+  const secs = NAV[activeTab].sections;
+  const probe = barEl.offsetHeight + 40;
+  let cur = secs[0].id;
+  for (const s of secs) {
+    if (document.getElementById(s.id).getBoundingClientRect().top <= probe) cur = s.id;
+    else break;
+  }
+  setChip(subnavEl.children[activeTab], cur);
+}
+
+function progress() {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  pbarEl.style.width = (max > 0 ? Math.min(100, Math.max(0, scrollY / max * 100)) : 0) + '%';
+}
+
+function selectTab(i) {
+  activeTab = i;
+  NAV.forEach((nav, k) => {
+    tabsEl.querySelectorAll('.tab')[k].setAttribute('aria-selected', k === i);
+    document.getElementById(`panel-${nav.id}`).hidden = k !== i;
+    subnavEl.children[k].hidden = k !== i;
+  });
+  moveInd();
+  syncBarH();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  spy();
+}
+
+addEventListener('scroll', () => { spy(); progress(); }, { passive: true });
+addEventListener('resize', () => { moveInd(false); syncBarH(); }, { passive: true });
+moveInd(false); syncBarH(); spy(); progress();
+
+/* ── 回到頂端 ─────────────────────── */
+const topBtn = document.getElementById('top');
+const syncTopBtn = () => topBtn.classList.toggle('on', window.scrollY > 600);
+addEventListener('scroll', syncTopBtn, { passive: true });
+topBtn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+syncTopBtn();
+
+/* ── 燈箱 ─────────────────────────── */
+const box = document.getElementById('box');
+const boxImg = document.getElementById('boximg');
+const boxBar = document.getElementById('boxbar');
+let cur = 0;
+
+function openBox(i) {
+  cur = (i + flat.length) % flat.length;
+  const it = flat[cur];
+  boxImg.src = it.src;
+  boxImg.alt = it.t;
+  boxBar.innerHTML = `<b>${cur + 1} / ${flat.length}</b><code>${it.c}</code>${it.t}`;
+  box.classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function closeBox() {
+  box.classList.remove('on');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('x').onclick = closeBox;
+document.getElementById('prev').onclick = e => { e.stopPropagation(); openBox(cur - 1); };
+document.getElementById('next').onclick = e => { e.stopPropagation(); openBox(cur + 1); };
+box.onclick = e => { if (e.target === box || e.target.classList.contains('boxview')) closeBox(); };
+document.addEventListener('keydown', e => {
+  if (!box.classList.contains('on')) return;
+  if (e.key === 'Escape') closeBox();
+  if (e.key === 'ArrowLeft') openBox(cur - 1);
+  if (e.key === 'ArrowRight') openBox(cur + 1);
+});
+</script>
+</body>
+</html>
