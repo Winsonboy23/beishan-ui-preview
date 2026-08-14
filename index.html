@@ -256,7 +256,7 @@ main.wrap{padding-bottom:90px}   /* 沒有頁尾了，留白讓最後一排卡�
   </h1>
   <p class="byline"><em>設計・製作</em>Winson Liu</p>
   <p class="intro">
-    這是開發前的完整介面稿。「流程總覽」把 43 張畫面串成六條使用動線，先看懂動線再進圖牆；其餘三個分頁照角色瀏覽全部畫面。點任一張圖或流程節點可放大，放大後用鍵盤 ← → 連續翻看、Esc 關閉。
+    這是開發前的完整介面稿，依角色分成三個圖牆分頁；最後的「流程總覽」把 43 張畫面串成六條使用動線。點任一張圖或流程節點可放大，放大後用鍵盤 ← → 連續翻看、Esc 關閉。
     每張卡片同時標了流水號與設計稿原本的規格代號（如 <code style="font-family:var(--mono);font-size:12px">P-01</code>），
     討論時直接報代號即可對上。
   </p>
@@ -514,9 +514,9 @@ const flowNums = f => [...new Set(f.blocks.flatMap(b =>
     .filter(n => typeof n === 'number')))];
 
 const NAV = [
+  ...TABS,
   { id:'flow', label:'流程總覽', flows:FLOWS,
     sections: FLOWS.map(f => ({ id:f.id, title:f.title, count: flowNums(f).length })) },
-  ...TABS,
 ];
 
 function snode(num) {
